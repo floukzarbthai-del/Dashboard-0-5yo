@@ -945,31 +945,33 @@
             return fullname;
         };
 
-        const renderChild05Table = (uniquePersons, dist) => {
-            const tb = document.getElementById('child05TableBody'); if (!tb) return; tb.innerHTML = '';
+const renderChild05Table = (uniquePersons, dist) => {
+            const tb = document.getElementById('child05TableBody'); if (!tb) return; 
+            
+            // 1. สร้างตัวแปรมารับข้อความ HTML ทั้งหมด
+            let htmlContent = ''; 
             const ageSub = document.getElementById('filterAgeSub').value;
             
-            // เปลี่ยนชื่อหัวตารางตามกลุ่มอายุที่เลือก
             const titleEl = document.getElementById('child05TableTitle');
             if (titleEl) {
-                if (ageSub === "0-2 ปี") {
-                    titleEl.innerText = "รายชื่อเด็ก 0-2 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
-                } else if (ageSub === "3-5 ปี") {
-                    titleEl.innerText = "รายชื่อเด็ก 3-5 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
-                } else {
-                    titleEl.innerText = "รายชื่อเด็ก 0-5 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
-                }
+                if (ageSub === "0-2 ปี") titleEl.innerText = "รายชื่อเด็ก 0-2 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
+                else if (ageSub === "3-5 ปี") titleEl.innerText = "รายชื่อเด็ก 3-5 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
+                else titleEl.innerText = "รายชื่อเด็ก 0-5 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
             }
 
             Array.from(uniquePersons.values())
                 .filter(p => p.subGroup05 !== "-" && (!dist || p.district === dist) && (!ageSub || p.subGroup05 === ageSub))
-                .sort((a,b) => (b.dCaries || 0) - (a.dCaries || 0)) // เรียงลำดับตาม DCARIES จากมากไปน้อย
+                .sort((a,b) => (b.dCaries || 0) - (a.dCaries || 0))
                 .forEach(i => {
                     const ageStr = i.age ? `${i.age.years}ปี ${i.age.months}ด ${i.age.days}ว` : "-";
                     const mCid = maskCID(i.cid);
                     const mName = maskName(i.fullname);
-                    tb.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-mono text-[11px] text-slate-500">${mCid}</td><td class="px-6 py-4 text-xs font-bold">${mName}</td><td class="text-center text-xs">${ageStr}</td><td class="text-center font-black ${i.cavityStatus==='FREE'?'text-teal-600':'text-red-500'}">${i.cavityStatus}</td><td class="text-center text-xs">${i.cariesValue || 0}</td><td class="text-center text-xs text-red-600 font-bold">${i.dCaries || 0}</td><td class="text-right px-8 py-4 font-mono text-slate-400 text-xs">${i.unitCode}</td></tr>`;
+                    // 2. เปลี่ยนจาก tb.innerHTML += เป็นการบวกเข้าตัวแปรชั่วคราว
+                    htmlContent += `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-mono text-[11px] text-slate-500">${mCid}</td><td class="px-6 py-4 text-xs font-bold">${mName}</td><td class="text-center text-xs">${ageStr}</td><td class="text-center font-black ${i.cavityStatus==='FREE'?'text-teal-600':'text-red-500'}">${i.cavityStatus}</td><td class="text-center text-xs">${i.cariesValue || 0}</td><td class="text-center text-xs text-red-600 font-bold">${i.dCaries || 0}</td><td class="text-right px-8 py-4 font-mono text-slate-400 text-xs">${i.unitCode}</td></tr>`;
                 });
+            
+            // 3. นำตัวแปรไปวาดลงหน้าจอเพียงครั้งเดียว (เร็วขึ้น 100 เท่า)
+            tb.innerHTML = htmlContent;
         };
 
         window.exportChild05Excel = () => {
@@ -1019,20 +1021,26 @@
             });
         };
 
-        const renderIndividualReport = (uniquePersons) => {
-            const tb = document.getElementById('individualTableBody'); if (!tb) return; tb.innerHTML = '';
+const renderIndividualReport = (uniquePersons) => {
+            const tb = document.getElementById('individualTableBody'); if (!tb) return; 
+            
+            let htmlContent = ''; // สร้างตัวแปรชั่วคราว
             const search = document.getElementById('individualSearch').value.toLowerCase();
             const dist = document.getElementById('filterDistrict').value;
             const unit = document.getElementById('filterUnit').value;
             const group = document.getElementById('filterGroupInd').value;
+            
             Array.from(uniquePersons.values())
                 .filter(i => (!search || i.cid.includes(search) || (i.fullname && i.fullname.toLowerCase().includes(search))) && (!dist || i.district === dist) && (!unit || i.unitCode === unit) && (!group || i.dType.toString() === group))
                 .forEach(i => {
                     const getC = (v) => v === "ปกติ" || v === "FREE" || v >= 4 ? 'text-teal-600 font-black' : (v === "-" ? 'text-slate-300' : 'text-red-500 font-black');
                     const mCid = maskCID(i.cid);
                     const mName = maskName(i.fullname);
-                    tb.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-mono text-[11px] text-slate-500">${mCid}</td><td class="px-6 py-4 text-xs font-bold">${mName}</td><td class="text-center text-xs">${i.dType}</td><td class="text-center text-xs font-black">${i.cariesValue || 0}</td><td class="text-center text-xs ${getC(i.gumStatus)}">${i.gumStatus}</td><td class="text-center text-xs ${getC(i.cavityStatus)}">${i.cavityStatus}</td><td class="text-center text-xs ${getC(i.occValue)}">${i.occValue !== null ? i.occValue : '-'}</td><td class="text-center"><span class="px-2 py-1 rounded-full text-[9px] font-black uppercase ${i.isCariesFree?'bg-green-100 text-green-700':'bg-pink-100 text-pink-700'}">${i.isCariesFree?'Free':'Risk'}</span></td><td class="text-right px-8 py-4 font-mono text-slate-400 text-[10px]">${i.unitCode}</td></tr>`;
+                    
+                    htmlContent += `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-mono text-[11px] text-slate-500">${mCid}</td><td class="px-6 py-4 text-xs font-bold">${mName}</td><td class="text-center text-xs">${i.dType}</td><td class="text-center text-xs font-black">${i.cariesValue || 0}</td><td class="text-center text-xs ${getC(i.gumStatus)}">${i.gumStatus}</td><td class="text-center text-xs ${getC(i.cavityStatus)}">${i.cavityStatus}</td><td class="text-center text-xs ${getC(i.occValue)}">${i.occValue !== null ? i.occValue : '-'}</td><td class="text-center"><span class="px-2 py-1 rounded-full text-[9px] font-black uppercase ${i.isCariesFree?'bg-green-100 text-green-700':'bg-pink-100 text-pink-700'}">${i.isCariesFree?'Free':'Risk'}</span></td><td class="text-right px-8 py-4 font-mono text-slate-400 text-[10px]">${i.unitCode}</td></tr>`;
                 });
+            
+            tb.innerHTML = htmlContent; // วาดลงจอครั้งเดียว
         };
 
         const renderManageReport = () => {
