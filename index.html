@@ -1025,23 +1025,58 @@ const renderChild05Table = (uniquePersons, dist) => {
 const renderIndividualReport = (uniquePersons) => {
             const tb = document.getElementById('individualTableBody'); if (!tb) return; 
             
-            let htmlContent = ''; // สร้างตัวแปรชั่วคราว
+            const rowsPerPage = 100; // กำหนดให้แสดงหน้าละ 100 คน (สามารถปรับลดได้)
+            let htmlContent = ''; 
             const search = document.getElementById('individualSearch').value.toLowerCase();
             const dist = document.getElementById('filterDistrict').value;
             const unit = document.getElementById('filterUnit').value;
             const group = document.getElementById('filterGroupInd').value;
             
-            Array.from(uniquePersons.values())
-                .filter(i => (!search || i.cid.includes(search) || (i.fullname && i.fullname.toLowerCase().includes(search))) && (!dist || i.district === dist) && (!unit || i.unitCode === unit) && (!group || i.dType.toString() === group))
-                .forEach(i => {
-                    const getC = (v) => v === "ปกติ" || v === "FREE" || v >= 4 ? 'text-teal-600 font-black' : (v === "-" ? 'text-slate-300' : 'text-red-500 font-black');
-                    const mCid = maskCID(i.cid);
-                    const mName = maskName(i.fullname);
-                    
-                    htmlContent += `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-mono text-[11px] text-slate-500">${mCid}</td><td class="px-6 py-4 text-xs font-bold">${mName}</td><td class="text-center text-xs">${i.dType}</td><td class="text-center text-xs font-black">${i.cariesValue || 0}</td><td class="text-center text-xs ${getC(i.gumStatus)}">${i.gumStatus}</td><td class="text-center text-xs ${getC(i.cavityStatus)}">${i.cavityStatus}</td><td class="text-center text-xs ${getC(i.occValue)}">${i.occValue !== null ? i.occValue : '-'}</td><td class="text-center"><span class="px-2 py-1 rounded-full text-[9px] font-black uppercase ${i.isCariesFree?'bg-green-100 text-green-700':'bg-pink-100 text-pink-700'}">${i.isCariesFree?'Free':'Risk'}</span></td><td class="text-right px-8 py-4 font-mono text-slate-400 text-[10px]">${i.unitCode}</td></tr>`;
-                });
+            // 1. กรองข้อมูลทั้งหมด และเก็บใส่ Array ไว้ก่อน
+            const filteredData = Array.from(uniquePersons.values())
+                .filter(i => (!search || i.cid.includes(search) || (i.fullname && i.fullname.toLowerCase().includes(search))) && (!dist || i.district === dist) && (!unit || i.unitCode === unit) && (!group || i.dType.toString() === group));
             
-            tb.innerHTML = htmlContent; // วาดลงจอครั้งเดียว
+            // 2. คำนวณตรรกะการแบ่งหน้า (Pagination Logic)
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
+            if (window.currentPageInd > totalPages) window.currentPageInd = totalPages;
+            if (window.currentPageInd < 1) window.currentPageInd = 1;
+            
+            const startIndex = (window.currentPageInd - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            
+            // 3. หั่นข้อมูลเอาเฉพาะของหน้าที่กำลังเปิดอยู่
+            const currentData = filteredData.slice(startIndex, endIndex);
+            
+            // 4. วาดตาราง "เฉพาะ 100 คน"
+            currentData.forEach(i => {
+                const getC = (v) => v === "ปกติ" || v === "FREE" || v >= 4 ? 'text-teal-600 font-black' : (v === "-" ? 'text-slate-300' : 'text-red-500 font-black');
+                const mCid = maskCID(i.cid);
+                const mName = maskName(i.fullname);
+                
+                htmlContent += `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-mono text-[11px] text-slate-500">${mCid}</td><td class="px-6 py-4 text-xs font-bold">${mName}</td><td class="text-center text-xs">${i.dType}</td><td class="text-center text-xs font-black">${i.cariesValue || 0}</td><td class="text-center text-xs ${getC(i.gumStatus)}">${i.gumStatus}</td><td class="text-center text-xs ${getC(i.cavityStatus)}">${i.cavityStatus}</td><td class="text-center text-xs ${getC(i.occValue)}">${i.occValue !== null ? i.occValue : '-'}</td><td class="text-center"><span class="px-2 py-1 rounded-full text-[9px] font-black uppercase ${i.isCariesFree?'bg-green-100 text-green-700':'bg-pink-100 text-pink-700'}">${i.isCariesFree?'Free':'Risk'}</span></td><td class="text-right px-8 py-4 font-mono text-slate-400 text-[10px]">${i.unitCode}</td></tr>`;
+            });
+            
+            // 5. สร้าง UI ปุ่มเปลี่ยนหน้าไว้ด้านล่างสุดของตาราง
+            const paginationHTML = `
+                <tr class="bg-slate-100 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                    <td colspan="9" class="px-6 py-4">
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                            <span class="text-xs font-bold text-slate-500">
+                                แสดงข้อมูล ${filteredData.length > 0 ? startIndex + 1 : 0} ถึง ${Math.min(endIndex, filteredData.length)} จากทั้งหมด <span class="text-teal-600 font-black">${filteredData.length.toLocaleString()}</span> รายการ
+                            </span>
+                            <div class="flex gap-2">
+                                <button onclick="window.currentPageInd=1; window.aggregate()" class="px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all ${window.currentPageInd === 1 ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}"><i data-lucide="chevrons-left" class="w-4 h-4"></i></button>
+                                <button onclick="window.currentPageInd--; window.aggregate()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm ${window.currentPageInd === 1 ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">ก่อนหน้า</button>
+                                <span class="px-6 py-2 bg-teal-50 text-teal-700 rounded-lg text-xs font-black border border-teal-200">หน้า ${window.currentPageInd} / ${totalPages}</span>
+                                <button onclick="window.currentPageInd++; window.aggregate()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm ${window.currentPageInd === totalPages ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">ถัดไป</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            tb.innerHTML = htmlContent + paginationHTML;
+            if (typeof lucide !== 'undefined') lucide.createIcons(); // โหลดไอคอนซ้ำให้ปุ่ม
         };
 
         const renderManageReport = () => {
