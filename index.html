@@ -415,7 +415,7 @@
             <div class="bg-white rounded-[3.5rem] shadow-sm overflow-hidden border border-slate-100">
                 <div class="p-8 space-y-6">
                     <div class="flex flex-col md:flex-row gap-6">
-                        <div class="relative flex-1"><input type="text" id="individualSearch" oninput="window.aggregate()" class="w-full pl-14 pr-8 py-5 bg-slate-50 border-none rounded-[1.5rem] outline-none shadow-inner" placeholder="ค้นหา CID หรือ ชื่อ-นามสกุล..."><i data-lucide="search" class="w-6 h-6 absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i></div>
+                        <div class="relative flex-1"><input type="text" id="individualSearch" oninput="window.currentPageInd=1; window.aggregate()" class="w-full pl-14 pr-8 py-5 bg-slate-50 border-none rounded-[1.5rem] outline-none shadow-inner" placeholder="ค้นหา CID หรือ ชื่อ-นามสกุล..."><i data-lucide="search" class="w-6 h-6 absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i></div>
                         <div class="flex gap-2 items-center bg-teal-50 p-2 rounded-[1.5rem] border border-teal-200">
                             <input type="password" id="exportPwInd" placeholder="รหัสผ่านส่งออก..." class="p-4 bg-white border rounded-[1rem] text-xs font-bold outline-none w-40 focus:ring-2 ring-teal-500">
                             <button id="exportExcelBtn" class="bg-teal-700 hover:bg-teal-800 text-white px-8 py-4 rounded-[1rem] text-xs font-black shadow-lg flex items-center gap-2 transition-all"><i data-lucide="download" class="w-5 h-5"></i> EXPORT EXCEL (ALL)</button>
@@ -503,6 +503,7 @@
         const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'chiangmai-dental-v9-pro';
         
         let db, auth, user, mainData = [], child05BarChart, execRadarChart, execDoughnutChart, execCavity05Chart, execCavity612Chart, execCaries05Chart, execCaries612Chart;
+        window.currentPageInd = 1;
         const prenameMap = { '001': 'ด.ช.', '002': 'ด.ญ.', '003': 'นาย', '004': 'นาง', '005': 'น.ส.' };
         
         // นำตัวแปรเก็บรายชื่ออำเภอกลับมาให้ระบบเพื่อให้ aggregate ดึงไปใช้งานได้อย่างถูกต้อง
