@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiang Mai Dental KPI - Professional Specialist Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
+        .tab-btn { @apply px-8 py-3.5 rounded-2xl text-sm font-bold transition-all duration-300 flex items-center gap-2; }
+        .tab-active { @apply bg-teal-600 text-white shadow-lg transform scale-105 z-10; }
+        .tab-inactive { @apply text-slate-500 hover:bg-white hover:text-teal-600 hover:shadow-sm; }
+        .target-card { @apply bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100 flex flex-col gap-10 transition-all hover:shadow-md; }
+        .card-title-area { @apply flex justify-between items-center border-b border-slate-50 pb-6; }
+        .indicator-label { @apply text-4xl lg:text-5xl font-black text-black uppercase tracking-tighter text-center; -webkit-text-stroke: 1.5px black; }
+        .indicator-value { @apply text-6xl lg:text-7xl font-black text-black leading-none text-center; }
+        .indicator-unit { @apply text-xl lg:text-2xl font-bold text-black uppercase text-center; }
+        
+        /* Executive Dashboard Specific Styles */
+        .exec-card { @apply bg-white p-8 rounded-[3rem] shadow-xl border border-slate-50 flex flex-col gap-6; }
+        .glass-stat { @apply bg-gradient-to-br from-white to-slate-50 border border-white p-6 rounded-3xl shadow-sm; }
+    </style>
+</head>
+<body class="min-h-screen pb-24">
+
+    <header class="bg-gradient-to-r from-teal-900 via-teal-800 to-teal-700 text-white shadow-xl p-8 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center space-x-6">
+                <div class="bg-white p-4 rounded-3xl shadow-inner transform rotate-2"><i data-lucide="tooth" class="w-10 h-10 text-teal-700"></i></div>
+                <div>
+                    <h1 class="text-3xl font-black leading-tight tracking-tight text-white">สถานการณ์สภาวะช่องปากจังหวัดเชียงใหม่</h1>
+                    <p class="text-sm opacity-80 font-medium italic">ระบบติดตามตัวชี้วัดของกลุ่มงานทันตสาธารณสุข สสจ.เชียงใหม่ (Specialist Edition)</p>
+                </div>
+            </div>
+            <div id="authStatus" class="text-[10px] bg-white bg-opacity-10 px-5 py-2.5 rounded-full border border-teal-300 border-opacity-30 font-bold backdrop-blur-md uppercase tracking-[0.2em]">System Synchronized</div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-8 space-y-12">
+        <!-- Navigation -->
+        <nav class="flex flex-wrap gap-3 p-2 bg-slate-200 bg-opacity-60 rounded-[2.5rem] w-fit mx-auto md:mx-0 shadow-inner">
+            <button onclick="window.switchTab('executive')" id="tab-executive" class="tab-btn tab-active bg-amber-500 text-white"><i data-lucide="crown" class="w-5 h-5"></i> Dashboard ผู้บริหาร</button>
+            <button onclick="window.switchTab('overview')" id="tab-overview" class="tab-btn tab-inactive"><i data-lucide="layout-dashboard" class="w-5 h-5"></i> ภาพรวมรายกลุ่มวัย</button>
+            <button onclick="window.switchTab('import')" id="tab-import" class="tab-btn tab-inactive"><i data-lucide="upload-cloud" class="w-5 h-5"></i> นำเข้าข้อมูล</button>
+            <button onclick="window.switchTab('child05')" id="tab-child05" class="tab-btn tab-inactive text-teal-700 font-black"><i data-lucide="baby" class="w-5 h-5"></i> รายงาน 0-5 ปี</button>
+            <button onclick="window.switchTab('unit')" id="tab-unit" class="tab-btn tab-inactive"><i data-lucide="building-2" class="w-5 h-5"></i> รายงานหน่วยงาน</button>
+            <button onclick="window.switchTab('individual')" id="tab-individual" class="tab-btn tab-inactive"><i data-lucide="users" class="w-5 h-5"></i> รายงานบุคคล</button>
+            <button onclick="window.switchTab('manage')" id="tab-manage" class="tab-btn tab-inactive"><i data-lucide="file-clock" class="w-5 h-5"></i> ประวัติการนำเข้า</button>
+        </nav>
+
+        <!-- Executive Dashboard Section -->
+        <section id="content-executive" class="space-y-12">
+            
+            <!-- NEW: Executive District Filter -->
+            <div class="flex justify-end items-center gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-8">
+                <span class="text-xs font-black text-slate-400 uppercase tracking-widest">กรองข้อมูลกราฟ 5 กลุ่มวัยและสัดส่วน:</span>
+                <select id="execDistrictFilter" class="p-3 bg-slate-50 border rounded-xl text-xs font-bold text-teal-700 outline-none focus:ring-2 ring-teal-500 transition-all">
+                    <option value="">-- แสดงทั้งจังหวัดเชียงใหม่ --</option>
+                </select>
+                <button onclick="window.aggregate()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl text-xs font-black shadow-md transition-all">ตกลง</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Executive KPI Radar -->
+                <div class="exec-card lg:col-span-2">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-2xl font-black text-slate-800 tracking-tighter">สถานการณ์สุขภาพช่องปาก 5 กลุ่มวัย</h3>
+                            <p class="text-xs text-slate-400 font-bold uppercase">เปรียบเทียบร้อยละ Caries/Cavity Free แยกตามกลุ่มเป้าหมาย</p>
+                        </div>
+                        <i data-lucide="activity" class="w-8 h-8 text-teal-500"></i>
+                    </div>
+                    <div style="height: 450px; position: relative;">
+                        <canvas id="execRadarChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Service Distribution -->
+                <div class="exec-card">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-800 tracking-tighter">สัดส่วนผู้รับบริการ</h3>
+                        <p class="text-xs text-slate-400 font-bold uppercase">จำนวนการตรวจคัดกรองแยกตามกลุ่มวัย</p>
+                    </div>
+                    <div style="height: 300px; position: relative;" class="flex items-center justify-center">
+                        <canvas id="execDoughnutChart"></canvas>
+                    </div>
+                    <div id="execLegend" class="grid grid-cols-2 gap-2 mt-4"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Leaderboard -->
+                <div class="exec-card">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-2xl font-black text-slate-800 tracking-tighter">5 อันดับอำเภอผลงานสูงสุด</h3>
+                            <p class="text-xs text-slate-400 font-bold uppercase">กลุ่มอายุ 0-5 ปี (Cavity Free %)</p>
+                        </div>
+                        <i data-lucide="award" class="w-8 h-8 text-amber-500"></i>
+                    </div>
+                    <div id="execLeaderboard" class="space-y-4 py-4">
+                        <!-- Dynamic Leaderboard -->
+                    </div>
+                </div>
+
+                <!-- Fast Stats Analytics -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="glass-stat">
+                        <p class="text-xs font-black text-slate-400 uppercase mb-2">รวมผู้รับบริการทั้งจังหวัด</p>
+                        <h4 id="exec-total-all" class="text-4xl font-black text-teal-700">0</h4>
+                        <p class="text-[10px] text-slate-400 mt-1">คน (ข้อมูลรวมทุกแฟ้มที่นำเข้า)</p>
+                    </div>
+                    <div class="glass-stat">
+                        <p class="text-xs font-black text-slate-400 uppercase mb-2">อัตรา Cavity Free 0-5 ปี</p>
+                        <h4 id="exec-avg-cv05" class="text-4xl font-black text-green-600">0.0%</h4>
+                        <p class="text-[10px] text-slate-400 mt-1">ค่าเฉลี่ยระดับจังหวัด</p>
+                    </div>
+                    <div class="glass-stat">
+                        <p class="text-xs font-black text-slate-400 uppercase mb-2">หน่วยงานที่ส่งข้อมูล</p>
+                        <h4 id="exec-unit-count" class="text-4xl font-black text-blue-600">0</h4>
+                        <p class="text-[10px] text-slate-400 mt-1">HOSPCODE จาก 25 อำเภอ</p>
+                    </div>
+                    <div class="glass-stat">
+                        <p class="text-xs font-black text-slate-400 uppercase mb-2">ข้อมูลล่าสุดเมื่อ</p>
+                        <h4 id="exec-last-update" class="text-xl font-black text-slate-700 mt-4 leading-tight">-</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- District Comparisons (Highest to Lowest) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
+                <div class="col-span-1 lg:col-span-2">
+                    <h3 class="text-3xl font-black text-slate-800 tracking-tighter mb-2">เปรียบเทียบผลงานรายอำเภอ (สูงสุด-ต่ำสุด)</h3>
+                    <p class="text-sm text-slate-400 font-bold uppercase mb-6">จัดอันดับพื้นที่ตามความสำเร็จของตัวชี้วัดเด็กปฐมวัยและวัยเรียน</p>
+                </div>
+                
+                <!-- Cavity Free 0-5 -->
+                <div class="exec-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-black text-slate-700">Cavity Free (0-5 ปี)</h3>
+                        <i data-lucide="bar-chart-2" class="w-6 h-6 text-teal-500"></i>
+                    </div>
+                    <div style="height: 250px; position: relative;"><canvas id="execCavity05Chart"></canvas></div>
+                </div>
+
+                <!-- Cavity Free 6-12 -->
+                <div class="exec-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-black text-slate-700">Cavity Free (6-12 ปี)</h3>
+                        <i data-lucide="bar-chart-2" class="w-6 h-6 text-orange-500"></i>
+                    </div>
+                    <div style="height: 250px; position: relative;"><canvas id="execCavity612Chart"></canvas></div>
+                </div>
+
+                <!-- Caries Free 0-5 -->
+                <div class="exec-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-black text-slate-700">Caries Free (0-5 ปี)</h3>
+                        <i data-lucide="bar-chart-2" class="w-6 h-6 text-green-500"></i>
+                    </div>
+                    <div style="height: 250px; position: relative;"><canvas id="execCaries05Chart"></canvas></div>
+                </div>
+
+                <!-- Caries Free 6-12 -->
+                <div class="exec-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-black text-slate-700">Caries Free (6-12 ปี)</h3>
+                        <i data-lucide="bar-chart-2" class="w-6 h-6 text-blue-500"></i>
+                    </div>
+                    <div style="height: 250px; position: relative;"><canvas id="execCaries612Chart"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ภาพรวมรายกลุ่มวัย (Original Overview) -->
+        <section id="content-overview" class="hidden space-y-12">
+            <div class="flex justify-end items-center gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                <span class="text-xs font-black text-slate-400 uppercase tracking-widest">กรองข้อมูลภาพรวม:</span>
+                <select id="overviewDistrictFilter" class="p-3 bg-slate-50 border rounded-xl text-xs font-bold text-teal-700 outline-none focus:ring-2 ring-teal-500 transition-all">
+                    <option value="">-- แสดงทั้งจังหวัดเชียงใหม่ --</option>
+                </select>
+                <button onclick="window.aggregate()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl text-xs font-black shadow-md transition-all">ตกลง</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <!-- หญิงตั้งครรภ์ -->
+                <div class="target-card border-t-[12px] border-pink-400">
+                    <div class="card-title-area">
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <h3 class="text-3xl font-black text-slate-700 tracking-tight">หญิงตั้งครรภ์</h3>
+                            <div class="bg-slate-100 px-4 py-1.5 rounded-full text-sm font-bold border border-slate-200">ตรวจแล้ว <span id="preg-count" class="text-pink-600 font-black">0</span> คน</div>
+                        </div>
+                        <i data-lucide="heart" class="w-8 h-8 text-pink-500"></i>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="grid grid-cols-3 gap-4"><div class="indicator-label">CARIES FREE</div><div class="indicator-label">สภาวะเหงือก</div><div class="indicator-label">DMFT</div></div>
+                        <div class="grid grid-cols-3 gap-4"><div id="preg-cf-val" class="indicator-value">0.0</div><div id="preg-gum-val" class="indicator-value">0.0</div><div id="preg-dmft-val" class="indicator-value">0.00</div></div>
+                        <div class="grid grid-cols-3 gap-4"><div class="indicator-unit">%</div><div class="indicator-unit">% (ปกติ)</div><div class="indicator-unit">ซี่ / คน</div></div>
+                    </div>
+                </div>
+
+                <!-- เด็ก 0-5 ปี -->
+                <div class="target-card border-t-[12px] border-green-500">
+                    <div class="card-title-area">
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <h3 class="text-3xl font-black text-slate-700 tracking-tight">เด็ก 0-5 ปี</h3>
+                            <div class="bg-slate-100 px-4 py-1.5 rounded-full text-sm font-bold border border-slate-200">ตรวจแล้ว <span id="c05-count" class="text-green-600 font-black">0</span> คน</div>
+                        </div>
+                        <i data-lucide="baby" class="w-8 h-8 text-green-600"></i>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="grid grid-cols-3 gap-4"><div class="indicator-label">CARIES FREE</div><div class="indicator-label">CAVITY FREE</div><div class="indicator-label">dmft</div></div>
+                        <div class="grid grid-cols-3 gap-4"><div id="c05-cf-val" class="indicator-value">0.0</div><div id="c05-cv-val" class="indicator-value">0.0</div><div id="c05-dmft-val" class="indicator-value">0.00</div></div>
+                        <div class="grid grid-cols-3 gap-4"><div class="indicator-unit">%</div><div class="indicator-unit">%</div><div class="indicator-unit">ซี่ / คน</div></div>
+                    </div>
+                </div>
+
+                <!-- เด็ก 6-12 ปี -->
+                <div class="target-card border-t-[12px] border-orange-400">
+                    <div class="card-title-area">
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <h3 class="text-3xl font-black text-slate-700 tracking-tight">เด็ก 6-12 ปี</h3>
+                            <div class="bg-slate-100 px-4 py-1.5 rounded-full text-sm font-bold border border-slate-200">ตรวจแล้ว <span id="c612-count" class="text-orange-600 font-black">0</span> คน</div>
+                        </div>
+                        <i data-lucide="graduation-cap" class="w-8 h-8 text-orange-500"></i>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="grid grid-cols-3 gap-4"><div class="indicator-label">CARIES FREE</div><div class="indicator-label">CAVITY FREE</div><div class="indicator-label">DMFT</div></div>
+                        <div class="grid grid-cols-3 gap-4"><div id="c612-cf-val" class="indicator-value">0.0</div><div id="c612-cv-val" class="indicator-value">0.0</div><div id="c612-dmft-val" class="indicator-value">0.00</div></div>
+                        <div class="grid grid-cols-3 gap-4"><div class="indicator-unit">%</div><div class="indicator-unit">%</div><div class="indicator-unit">ซี่ / คน</div></div>
+                    </div>
+                </div>
+
+                <!-- ประชาชน 13-59 ปี -->
+                <div class="target-card border-t-[12px] border-blue-500">
+                    <div class="card-title-area">
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <h3 class="text-3xl font-black text-slate-700 tracking-tight">ประชาชนช่วงอายุ 13-59 ปี</h3>
+                            <div class="bg-slate-100 px-4 py-1.5 rounded-full text-sm font-bold border border-slate-200">ตรวจแล้ว <span id="work-count" class="text-blue-600 font-black">0</span> คน</div>
+                        </div>
+                        <i data-lucide="briefcase" class="w-8 h-8 text-blue-600"></i>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="grid grid-cols-2 gap-4"><div class="indicator-label">CARIES FREE</div><div class="indicator-label">DMFT</div></div>
+                        <div class="grid grid-cols-2 gap-4"><div id="work-cf-val" class="indicator-value">0.0</div><div id="work-dmft-val" class="indicator-value">0.00</div></div>
+                        <div class="grid grid-cols-2 gap-4"><div class="indicator-unit">%</div><div class="indicator-unit">ซี่ / คน</div></div>
+                    </div>
+                </div>
+
+                <!-- ผู้สูงอายุ -->
+                <div class="target-card border-t-[12px] border-purple-500">
+                    <div class="card-title-area">
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <h3 class="text-3xl font-black text-slate-700 tracking-tight">ผู้สูงอายุ</h3>
+                            <div class="bg-slate-100 px-4 py-1.5 rounded-full text-sm font-bold border border-slate-200">ตรวจแล้ว <span id="elder-count" class="text-purple-600 font-black">0</span> คน</div>
+                        </div>
+                        <i data-lucide="user-plus" class="w-8 h-8 text-purple-600"></i>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="grid grid-cols-3 gap-4"><div class="indicator-label">CARIES FREE</div><div class="indicator-label">DMFT</div><div class="indicator-label">มีคู่สบฟันแท้ 4 คู่</div></div>
+                        <div class="grid grid-cols-3 gap-4"><div id="elder-cf-val" class="indicator-value">0.0</div><div id="elder-dmft-val" class="indicator-value">0.00</div><div id="elder-occ-val" class="indicator-value">0.0</div></div>
+                        <div class="grid grid-cols-3 gap-4"><div class="indicator-unit">%</div><div class="indicator-unit">ซี่ / คน</div><div class="indicator-unit">%</div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- นำเข้าข้อมูล -->
+        <section id="content-import" class="hidden">
+            <div class="max-w-4xl mx-auto bg-white p-14 rounded-[4.5rem] shadow-2xl border border-slate-100">
+                <h3 class="text-4xl font-black text-slate-800 mb-12">ผู้นำเข้าข้อมูล (Data Hub)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div class="space-y-8 bg-slate-50 p-10 rounded-[3rem]">
+                        <select id="districtSelect" class="w-full bg-white border-2 rounded-[1.5rem] p-5 font-bold outline-none focus:border-teal-500 transition-all">
+                            <option value="">-- เลือกอำเภอ --</option>
+                        </select>
+                        <input type="text" id="unitCodeInput" maxlength="5" class="w-full bg-white border-2 rounded-[1.5rem] p-5 font-mono font-bold outline-none focus:border-teal-500" placeholder="HOSPCODE 5 หลัก">
+                        
+                        <input type="text" id="dateInput" min="2025-10" placeholder="--เลือกเดือนของข้อมูลที่นำเข้า--" onfocus="(this.type='month')" onblur="(this.value == '' ? this.type='text' : this.type='month')" class="w-full bg-white border-2 rounded-[1.5rem] p-5 font-bold outline-none focus:border-teal-500 shadow-sm transition-all">
+                        
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Encoding (เลือก Windows-874 เพื่อแก้ตัวต่างดาว)</label>
+                            <select id="encodingSelect" class="w-full bg-white border-2 rounded-[1.5rem] p-5 font-bold outline-none focus:border-teal-500">
+                                <option value="windows-874">Windows-874 (ไทย)</option>
+                                <option value="utf-8">UTF-8 (สากล)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="space-y-8">
+                        <div class="p-8 bg-teal-50 rounded-[2.5rem] border border-teal-100 shadow-inner">
+                            <span class="block text-2xl font-black text-teal-700 uppercase tracking-wider mb-3">PERSON.txt</span>
+                            <input type="file" id="personFile" accept=".txt" class="text-sm font-bold w-full text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200 cursor-pointer transition-all">
+                        </div>
+                        <div class="p-8 bg-blue-50 rounded-[2.5rem] border border-blue-100 shadow-inner">
+                            <span class="block text-2xl font-black text-blue-700 uppercase tracking-wider mb-3">DENTAL.txt</span>
+                            <input type="file" id="dentalFile" accept=".txt" class="text-sm font-bold w-full text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer transition-all">
+                        </div>
+                        <button id="processBtn" class="w-full bg-slate-900 text-white font-black py-8 rounded-[3rem] hover:bg-black transition-all text-xl shadow-xl">เริ่มวิเคราะห์ข้อมูล</button>
+                    </div>
+                </div>
+                <div id="previewArea" class="hidden mt-16"><div id="previewGrid" class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"></div><button id="sendToHubBtn" class="w-full bg-teal-600 text-white font-black py-10 rounded-[4rem] hover:bg-teal-700 shadow-2xl text-3xl transition-all">บันทึกข้อมูลเข้าคลังจังหวัด</button></div>
+            </div>
+        </section>
+
+        <!-- รายงาน 0-5 ปี Cavity Free -->
+        <section id="content-child05" class="hidden space-y-12">
+            <div class="bg-white p-12 rounded-[4rem] shadow-sm border border-slate-100">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
+                    <div>
+                        <h3 class="text-4xl font-black text-teal-800 tracking-tighter">รายงาน 0-5 ปี Cavity Free (จำแนกรายกลุ่มอายุ)</h3>
+                        <p class="text-sm text-slate-400 font-bold uppercase mt-2 tracking-widest">คำนวณจากอายุ ณ วันรับบริการ | ไม่นับซ้ำ CID</p>
+                    </div>
+                    <div class="bg-teal-50 px-8 py-4 rounded-3xl border border-teal-100 text-center">
+                        <p class="text-[10px] font-black text-teal-600 uppercase">ตรวจแล้วรวมทั้งหมด</p>
+                        <p id="child05-total-count" class="text-4xl font-black text-teal-800">0 คน</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end items-center gap-3 mb-8">
+                    <select id="child05DistrictFilter" class="p-4 bg-slate-50 border rounded-2xl text-xs font-bold text-teal-600 outline-none focus:ring-2 ring-teal-500">
+                        <option value="">-- ทุกอำเภอ --</option>
+                    </select>
+                    <button onclick="window.aggregate()" class="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-2xl text-xs font-black shadow-md transition-all">ตกลง</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
+                    <div class="bg-gradient-to-br from-white to-sky-50 p-10 rounded-[3rem] border border-sky-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="text-2xl font-black text-sky-900">กลุ่มอายุ 0-2 ปี</h4>
+                            <span class="bg-sky-500 text-white px-4 py-1 rounded-full text-[10px] font-black">0 - 2 ปี 11 เดือน 29 วัน</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center p-6 bg-white rounded-3xl border border-sky-100 shadow-inner"><p class="text-[10px] font-black text-slate-400 uppercase">ตรวจแล้ว</p><p id="c02-n" class="text-3xl font-black text-slate-700">0</p></div>
+                            <div class="text-center p-6 bg-white rounded-3xl border border-sky-100 shadow-inner"><p class="text-[10px] font-black text-sky-500 uppercase">CAVITY FREE</p><p id="c02-cf" class="text-3xl font-black text-sky-600">0.0%</p></div>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-white to-teal-50 p-10 rounded-[3rem] border border-teal-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="text-2xl font-black text-teal-900">กลุ่มอายุ 3-5 ปี</h4>
+                            <span class="bg-teal-500 text-white px-4 py-1 rounded-full text-[10px] font-black">3 - 5 ปี 11 เดือน 29 วัน</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center p-6 bg-white rounded-3xl border border-teal-100 shadow-inner"><p class="text-[10px] font-black text-slate-400 uppercase">ตรวจแล้ว</p><p id="c35-n" class="text-3xl font-black text-slate-700">0</p></div>
+                            <div class="text-center p-6 bg-white rounded-3xl border border-teal-100 shadow-inner"><p class="text-[10px] font-black text-teal-500 uppercase">CAVITY FREE</p><p id="c35-cf" class="text-3xl font-black text-sky-600">0.0%</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-12 rounded-[4rem] border border-slate-100 shadow-inner mb-12">
+                    <div class="flex items-center gap-4 mb-8">
+                        <i data-lucide="bar-chart-3" class="w-8 h-8 text-teal-600"></i>
+                        <h4 class="text-2xl font-black text-slate-700">เปรียบเทียบ Cavity Free แยกรายอำเภอ</h4>
+                    </div>
+                    <div style="height: 400px; position: relative;"><canvas id="child05BarChart"></canvas></div>
+                </div>
+
+                <div class="bg-white rounded-[4rem] shadow-sm overflow-hidden border border-slate-100">
+                    <div class="p-8 border-b bg-slate-50 flex flex-wrap justify-between items-center gap-4">
+                        <h4 id="child05TableTitle" class="font-black text-slate-800 uppercase">รายชื่อเด็ก 0-5 ปี (เรียงตามการมีฟันผุมาก - น้อย)</h4>
+                        <div class="flex gap-4 items-center">
+                            <div class="flex gap-2 items-center">
+                                <select id="filterAgeSub" class="p-3 bg-white border rounded-xl text-xs font-bold text-slate-500">
+                                    <option value="">-- แสดงทั้งหมด --</option>
+                                    <option value="0-2 ปี">กลุ่ม 0-2 ปี</option>
+                                    <option value="3-5 ปี">กลุ่ม 3-5 ปี</option>
+                                </select>
+                                <button onclick="window.aggregate()" class="bg-slate-700 hover:bg-slate-800 text-white px-5 py-3 rounded-xl text-xs font-black shadow-md transition-all">ตกลง</button>
+                            </div>
+                            <div class="flex gap-2 items-center bg-green-50 p-1.5 rounded-2xl border border-green-200">
+                                <input type="password" id="exportPw05" placeholder="รหัสผ่าน..." class="p-2.5 bg-white border rounded-xl text-xs font-bold outline-none w-28 focus:ring-2 ring-green-500">
+                                <button onclick="window.exportChild05Excel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-lg flex items-center gap-2 transition-all">
+                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> EXPORT EXCEL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="min-w-full divide-y divide-slate-100">
+                            <thead class="bg-slate-100 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-6 py-5 text-left text-[11px] font-black text-slate-400 uppercase">CID</th>
+                                    <th class="px-6 py-5 text-left text-[11px] font-black text-slate-400 uppercase">ชื่อ-นามสกุล</th>
+                                    <th class="px-6 py-5 text-center text-[11px] font-black text-slate-400 uppercase">อายุ (ณ วันตรวจ)</th>
+                                    <th class="px-6 py-5 text-center text-[11px] font-black text-slate-400 uppercase">CAVITY FREE</th>
+                                    <th class="px-6 py-5 text-center text-[11px] font-black text-slate-400 uppercase">dmft</th>
+                                    <th class="px-6 py-5 text-center text-[11px] font-black text-slate-400 uppercase">จ.น.ฟันผุ</th>
+                                    <th class="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase">HOSPCODE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="child05TableBody" class="bg-white divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- รายงานหน่วยงาน -->
+        <section id="content-unit" class="hidden space-y-12">
+            <div class="bg-white rounded-[3.5rem] shadow-sm overflow-hidden border border-slate-100">
+                <div class="p-10 bg-white border-b"><h3 class="font-black text-slate-800 text-2xl uppercase tracking-tighter">สถานะการส่งข้อมูลราย HOSPCODE</h3></div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y"><thead class="bg-slate-50"><tr><th class="px-10 py-7 text-left text-[11px] font-black text-slate-400 uppercase">รหัสหน่วย / อำเภอ</th><th class="px-6 py-7 text-center text-[11px] font-black text-pink-500 uppercase">หญิงครรภ์</th><th class="px-6 py-7 text-center text-[11px] font-black text-green-500 uppercase">เด็ก 0-5 ปี</th><th class="px-6 py-7 text-center text-[11px] font-black text-orange-500 uppercase">เด็ก 6-12 ปี</th><th class="px-6 py-7 text-center text-[11px] font-black text-blue-500 uppercase">13-59 ปี</th><th class="px-6 py-7 text-center text-[11px] font-black text-purple-500 uppercase">ผู้สูงอายุ</th><th class="px-10 py-7 text-right text-[11px] font-black text-slate-400 uppercase">รวม (คน)</th></tr></thead><tbody id="unitTableBody" class="bg-white divide-y"></tbody></table></div>
+            </div>
+            <div class="bg-white rounded-[3.5rem] shadow-sm overflow-hidden border border-slate-100">
+                <div class="p-10 bg-white border-b"><h3 class="font-black text-slate-800 text-2xl uppercase tracking-tighter">สถานะการส่งข้อมูลรายเดือนรายอำเภอ (ปีงบ 69)</h3></div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y"><thead class="bg-slate-50"><tr><th class="px-6 py-7 text-left text-[11px] font-black text-slate-400 uppercase">อำเภอ</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">ก.ย. 68</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">ต.ค. 68</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">พ.ย. 68</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">ธ.ค. 68</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">ม.ค. 69</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">ก.พ. 69</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">มี.ค. 69</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">เม.ย. 69</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">พ.ค. 69</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">มิ.ย. 69</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">ก.ค. 69</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">ส.ค. 69</th><th class="px-4 py-7 text-center text-[11px] font-black text-slate-400 uppercase">ก.ย. 69</th></tr></thead><tbody id="districtMonthTableBody" class="bg-white divide-y"></tbody></table></div>
+            </div>
+        </section>
+
+        <!-- รายงานบุคคล -->
+        <section id="content-individual" class="hidden">
+            <div class="bg-white rounded-[3.5rem] shadow-sm overflow-hidden border border-slate-100">
+                <div class="p-8 space-y-6">
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="relative flex-1"><input type="text" id="individualSearch" oninput="window.aggregate()" class="w-full pl-14 pr-8 py-5 bg-slate-50 border-none rounded-[1.5rem] outline-none shadow-inner" placeholder="ค้นหา CID หรือ ชื่อ-นามสกุล..."><i data-lucide="search" class="w-6 h-6 absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i></div>
+                        <div class="flex gap-2 items-center bg-teal-50 p-2 rounded-[1.5rem] border border-teal-200">
+                            <input type="password" id="exportPwInd" placeholder="รหัสผ่านส่งออก..." class="p-4 bg-white border rounded-[1rem] text-xs font-bold outline-none w-40 focus:ring-2 ring-teal-500">
+                            <button id="exportExcelBtn" class="bg-teal-700 hover:bg-teal-800 text-white px-8 py-4 rounded-[1rem] text-xs font-black shadow-lg flex items-center gap-2 transition-all"><i data-lucide="download" class="w-5 h-5"></i> EXPORT EXCEL (ALL)</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-4 items-center">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 w-full">
+                            <select id="filterDistrict" class="p-4 bg-slate-50 border rounded-2xl text-xs font-bold text-slate-600"><option value="">-- ทุกอำเภอ --</option></select>
+                            <select id="filterUnit" class="p-4 bg-slate-50 border rounded-2xl text-xs font-bold text-slate-600"><option value="">-- ทุกรหัสหน่วย --</option></select>
+                            <select id="filterGroupInd" class="p-4 bg-slate-50 border rounded-2xl text-xs font-bold text-slate-600">
+                                <option value="">-- ทุกกลุ่มวัย --</option>
+                                <option value="1">หญิงครรภ์</option><option value="2">0-5 ปี</option><option value="3">6-12 ปี</option><option value="5">13-59 ปี</option><option value="4">ผู้สูงอายุ</option>
+                            </select>
+                        </div>
+                        <button onclick="window.aggregate()" class="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-2xl text-xs font-black shadow-md transition-all w-full md:w-auto whitespace-nowrap">ตกลง</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto max-h-[700px]">
+                    <table class="min-w-full divide-y">
+                        <thead class="bg-slate-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase">CID</th>
+                                <th class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase">ชื่อ-นามสกุล</th>
+                                <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase">กลุ่ม</th>
+                                <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase">DMFT/dmft</th>
+                                <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase">เหงือก</th>
+                                <!-- FIXED: เปลี่ยนหัวตารางจาก CAVITY เป็น CAVITY FREE ให้ตรงกัน -->
+                                <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase">CAVITY FREE</th>
+                                <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase">คู่สบ (4 คู่)</th>
+                                <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase">CARIES FREE</th>
+                                <th class="px-8 py-6 text-right text-[11px] font-black text-slate-400 uppercase">HOSPCODE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="individualTableBody" class="bg-white divide-y"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ประวัติการนำเข้า -->
+        <section id="content-manage" class="hidden">
+            <div class="bg-white rounded-[3.5rem] shadow-sm overflow-hidden border border-slate-100">
+                <div class="p-10 bg-white border-b flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div><h3 class="font-black text-slate-800 text-2xl uppercase">ประวัติการนำเข้า</h3></div>
+                    <div class="flex items-center gap-3 bg-red-50 p-3 rounded-[2rem] border border-red-100">
+                        <select id="resetDistrictSelect" class="py-3 px-5 border rounded-xl text-xs font-bold text-slate-600"><option value="">-- รีเซ็ตอำเภอ --</option></select>
+                        <button onclick="window.resetDistrict()" class="bg-red-500 text-white px-6 py-3 rounded-xl text-xs font-black shadow-md">ล้างข้อมูล</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y"><thead class="bg-slate-50 sticky top-0 z-10"><tr><th class="px-8 py-6 text-left text-[11px] font-black text-slate-400 uppercase">วันเวลา</th><th class="px-6 py-6 text-left text-[11px] font-black text-slate-400 uppercase">อำเภอ / รหัสหน่วย</th><th class="px-6 py-6 text-center text-[11px] font-black text-slate-400 uppercase">เดือน</th><th class="px-6 py-6 text-center text-[11px] font-black text-slate-400 uppercase">จำนวน</th><th class="px-8 py-6 text-right text-[11px] font-black text-slate-400 uppercase">จัดการ</th></tr></thead><tbody id="manageTableBody" class="bg-white divide-y"></tbody></table></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toasts & Modals -->
+    <div id="toast" class="fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-950 text-white px-16 py-8 rounded-[4rem] hidden z-[100] border-t-8 border-teal-500 text-center animate-bounce"><span id="toastText" class="text-xl font-black"></span></div>
+    
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden z-[100] flex justify-center items-center"><div class="bg-white rounded-[3rem] p-10 max-w-md w-full mx-4 text-center"><h3 class="text-2xl font-black mb-4">ยืนยันการลบข้อมูล</h3><p id="confirmMessage" class="text-slate-500 font-bold mb-10 text-sm"></p><div class="flex gap-4"><button onclick="window.closeConfirm()" class="flex-1 bg-slate-100 py-4 rounded-2xl font-black">ยกเลิก</button><button id="confirmYesBtn" class="flex-1 bg-red-500 py-4 rounded-2xl text-white font-black shadow-lg">ยืนยันลบ</button></div></div></div>
+
+    <!-- Success Modal for Hub Import -->
+    <div id="successModal" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[110] flex justify-center items-center backdrop-blur-sm">
+        <div class="bg-white rounded-[3rem] p-12 max-w-sm w-full mx-4 text-center transform transition-all shadow-2xl">
+            <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="check" class="w-12 h-12 text-green-500 font-black"></i>
+            </div>
+            <h3 class="text-3xl font-black text-slate-800 mb-2">นำเข้าสำเร็จ!</h3>
+            <p class="text-slate-500 font-bold mb-10 text-sm">ข้อมูลได้ถูกบันทึกเข้าคลังจังหวัดและอัปเดต Dashboard เรียบร้อยแล้ว</p>
+            <button onclick="document.getElementById('successModal').classList.add('hidden')" class="w-full bg-teal-600 hover:bg-teal-700 py-5 rounded-3xl text-white font-black shadow-lg transition-all text-lg">รับทราบ</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // FIXED: ดึง Config แบบครอบคลุมเพื่อให้ผู้รับลิงก์เปิดดูได้ 
+        let firebaseConfig = {};
+        try { 
+            if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config); 
+            else if (typeof window.__firebase_config !== 'undefined') firebaseConfig = JSON.parse(window.__firebase_config);
+        } catch(e) {}
+        
+        // FIXED: บังคับให้ระบบชี้ไปที่กล่องข้อมูลเดิมของคุณหมอ เพื่อดึงข้อมูล 4 ไฟล์ที่หายไปกลับมา (และจะล็อกกล่องนี้ไว้ตลอดไป)
+        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'chiangmai-dental-v9-pro';
+        
+        let db, auth, user, mainData = [], child05BarChart, execRadarChart, execDoughnutChart, execCavity05Chart, execCavity612Chart, execCaries05Chart, execCaries612Chart;
+        const prenameMap = { '001': 'ด.ช.', '002': 'ด.ญ.', '003': 'นาย', '004': 'นาง', '005': 'น.ส.' };
+        
+        // นำตัวแปรเก็บรายชื่ออำเภอกลับมาให้ระบบเพื่อให้ aggregate ดึงไปใช้งานได้อย่างถูกต้อง
+        const cmDistricts = ["เมืองเชียงใหม่", "จอมทอง", "แม่แจ่ม", "เชียงดาว", "ดอยสะเก็ด", "แม่แตง", "แม่ริม", "สะเมิง", "ฝาง", "แม่อาย", "พร้าว", "สันป่าตอง", "สันกำแพง", "สันทราย", "หางดง", "ฮอด", "ดอยเต่า", "อมก๋อย", "สารภี", "เวียงแหง", "ไชยปราการ", "แม่วาง", "แม่ออน", "ดอยหล่อ", "กัลยาณิวัฒนา"];
+
+        const getFY = (yyyymm) => {
+            if (!yyyymm || yyyymm.length < 6) return 0;
+            const y = parseInt(yyyymm.substring(0,4));
+            const m = parseInt(yyyymm.substring(4,6));
+            return m >= 10 ? y + 1 : y;
+        };
+        const activeFY = 2026; // ตัดรายงานเฉพาะปีงบประมาณ 2569 (ต.ค. 2025 - ก.ย. 2026)
+
+        const calculateAgeAtService = (birthStr, serviceDateStr) => {
+            if (!birthStr || !serviceDateStr || birthStr.length < 8 || serviceDateStr.length < 8) return null;
+            const bY = parseInt(birthStr.substring(0,4)), bM = parseInt(birthStr.substring(4,6))-1, bD = parseInt(birthStr.substring(6,8));
+            const sY = parseInt(serviceDateStr.substring(0,4)), sM = parseInt(serviceDateStr.substring(4,6))-1, sD = parseInt(serviceDateStr.substring(6,8));
+            const birthDate = new Date(bY, bM, bD); const serviceDate = new Date(sY, sM, sD);
+            let years = serviceDate.getFullYear() - birthDate.getFullYear();
+            let months = serviceDate.getMonth() - birthDate.getMonth();
+            let days = serviceDate.getDate() - birthDate.getDate();
+            if (days < 0) { months--; days += 30; } if (months < 0) { years--; months += 12; }
+            return { years, months, days, totalDays: years*365 + months*30 + days };
+        };
+
+        window.switchTab = (tab) => {
+            ['executive', 'overview', 'import', 'child05', 'unit', 'individual', 'manage'].forEach(t => {
+                const c = document.getElementById(`content-${t}`);
+                const b = document.getElementById(`tab-${t}`);
+                if (c) c.classList.add('hidden');
+                if (b) {
+                    b.className = 'tab-btn tab-inactive';
+                    if (t === 'executive') b.className = 'tab-btn tab-inactive border-amber-500';
+                }
+            });
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            if (tab === 'executive') {
+                activeBtn.className = 'tab-btn tab-active bg-amber-500 text-white';
+            } else {
+                activeBtn.className = 'tab-btn tab-active';
+            }
+            initIcons(); 
+            if (tab === 'child05' || tab === 'executive') window.aggregate();
+        };
+
+        const showToast = (msg) => {
+            const t = document.getElementById('toast'), txt = document.getElementById('toastText');
+            txt.innerText = msg; t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 5000);
+        };
+
+        let confirmAction = null;
+        window.showConfirm = (msg, action) => {
+            document.getElementById('confirmMessage').innerText = msg; confirmAction = action;
+            document.getElementById('confirmModal').classList.remove('hidden');
+        };
+        window.closeConfirm = () => { confirmAction = null; document.getElementById('confirmModal').classList.add('hidden'); };
+        document.getElementById('confirmYesBtn')?.addEventListener('click', async () => {
+            if (confirmAction) { await confirmAction(); window.closeConfirm(); }
+        });
+
+        const initIcons = () => { if (typeof lucide !== 'undefined') lucide.createIcons(); };
+
+        const readFile = (file, enc = 'windows-874') => new Promise((res) => {
+            const r = new FileReader(); r.onload = (e) => res(new TextDecoder(enc).decode(new Uint8Array(e.target.result)));
+            r.readAsArrayBuffer(file);
+        });
+
+        const processData = async () => {
+            const pF = document.getElementById('personFile').files[0], dF = document.getElementById('dentalFile').files[0];
+            const dist = document.getElementById('districtSelect').value, unit = document.getElementById('unitCodeInput').value.trim();
+            const dateRaw = document.getElementById('dateInput').value, encoding = document.getElementById('encodingSelect').value;
+            if (!pF || !dF || !dist || !unit || !dateRaw) { showToast("กรุณากรอกข้อมูลให้ครบถ้วน"); return; }
+            const btn = document.getElementById('processBtn'); btn.disabled = true; btn.innerText = "กำลังประมวลผล...";
+            try {
+                const importMonth = dateRaw.replace('-', '');
+                const pText = await readFile(pF, encoding), dText = await readFile(dF, encoding);
+                
+                const findIdx = (headers, name) => {
+                    const exact = headers.findIndex(h => h.trim().toUpperCase() === name.toUpperCase());
+                    return exact !== -1 ? exact : headers.findIndex(h => h.trim().toUpperCase().includes(name.toUpperCase()));
+                };
+                
+                const pLines = pText.split(/\r?\n/).filter(l => l.trim() !== "");
+                const pHeaders = pLines[0].split('|').map(h => h.trim());
+                const iP_Pid = findIdx(pHeaders, 'PID'), iP_Hosp = findIdx(pHeaders, 'HOSPCODE'), iP_Birth = findIdx(pHeaders, 'BIRTH'), iP_Cid = findIdx(pHeaders, 'CID'), iP_Pre = findIdx(pHeaders, 'PRENAME'), iP_Name = findIdx(pHeaders, 'NAME'), iP_Lname = findIdx(pHeaders, 'LNAME');
+                const personMap = new Map();
+                for (let i = 1; i < pLines.length; i++) {
+                    const row = pLines[i].split('|').map(v => v.trim()); if (row.length < 5) continue;
+                    
+                    const p_pre = iP_Pre !== -1 ? (prenameMap[row[iP_Pre]] || row[iP_Pre] || '') : '';
+                    const p_name = iP_Name !== -1 ? (row[iP_Name] || '') : '';
+                    const p_lname = iP_Lname !== -1 ? (row[iP_Lname] || '') : '';
+                    const fullnameStr = `${p_pre}${p_name} ${p_lname}`.trim();
+                    
+                    personMap.set(`${row[iP_Hosp]}|${row[iP_Pid]}`, { cid: row[iP_Cid], birth: row[iP_Birth], fullname: fullnameStr || 'ไม่ทราบชื่อ' });
+                }
+                const dLines = dText.split(/\r?\n/).filter(l => l.trim() !== "");
+                const dHeaders = dLines[0].split('|').map(h => h.trim());
+                const iD_Pid = findIdx(dHeaders, 'PID'), iD_Hosp = findIdx(dHeaders, 'HOSPCODE'), iD_Date = findIdx(dHeaders, 'DATE_SERV'), iD_Type = findIdx(dHeaders, 'DENTTYPE'), iD_DC = findIdx(dHeaders, 'DCARIES'), iD_DE = findIdx(dHeaders, 'DEXTRACT'), iD_DF = findIdx(dHeaders, 'DFILLING'), iD_PC = findIdx(dHeaders, 'PCARIES'), iD_PE = findIdx(dHeaders, 'PEXTRACT'), iD_PF = findIdx(dHeaders, 'PFILLING'), iD_NeedSc = findIdx(dHeaders, 'NEED_SCALING'), iD_Perm = findIdx(dHeaders, 'PERMANENT_PERMANENT');
+                const details = []; const seenKeys = new Set();
+                for (let i = 1; i < dLines.length; i++) {
+                    const row = dLines[i].split('|').map(v => v.trim()); if (row.length < 5 || row[iD_Hosp] !== unit) continue;
+                    const pData = personMap.get(`${row[iD_Hosp]}|${row[iD_Pid]}`); if (!pData || seenKeys.has(pData.cid)) continue;
+                    
+                    // FIXED: จัดกลุ่มเป้าหมายใหม่ โดยอิงจากอายุจริง ณ วันรับบริการ (ยกเว้น DENTTYPE=1 ให้คงเป็นหญิงตั้งครรภ์)
+                    let originalDType = parseInt(row[iD_Type]); 
+                    const ageObj = calculateAgeAtService(pData.birth, row[iD_Date]);
+                    let dType = originalDType;
+                    
+                    if (originalDType !== 1 && ageObj !== null) {
+                        if (ageObj.years >= 0 && ageObj.years <= 5) dType = 2;
+                        else if (ageObj.years >= 6 && ageObj.years <= 12) dType = 3;
+                        else if (ageObj.years >= 13 && ageObj.years <= 59) dType = 5;
+                        else if (ageObj.years >= 60) dType = 4;
+                    }
+
+                    const dSum = (parseInt(row[iD_DC]) || 0) + (parseInt(row[iD_DE]) || 0) + (parseInt(row[iD_DF]) || 0);
+                    const pSum = (parseInt(row[iD_PC]) || 0) + (parseInt(row[iD_PE]) || 0) + (parseInt(row[iD_PF]) || 0);
+                    let cariesValue = dType === 2 ? dSum : pSum;
+                    let subGroup05 = (ageObj && ageObj.years <= 5) ? (ageObj.years <= 2 ? "0-2 ปี" : "3-5 ปี") : "-";
+                    let gumStatus = dType === 1 ? (row[iD_NeedSc] === "0" ? "ปกติ" : "ผิดปกติ") : "-";
+                    
+                    let dCaries = parseInt(row[iD_DC]) || 0;
+                    let pCaries = parseInt(row[iD_PC]) || 0;
+                    let cavityStatus = (dType === 2 || dType === 3) ? ( (dType===2 ? dCaries : pCaries) === 0 ? "FREE" : "RISK" ) : "-";
+                    
+                    let occValue = dType === 4 ? (parseInt(row[iD_Perm]) || 0) : null;
+                    
+                    details.push({ cid: pData.cid, fullname: pData.fullname, dType, isCariesFree: cariesValue === 0, cariesValue, dCaries, gumStatus, cavityStatus, occValue, age: ageObj, subGroup05, unitCode: unit, dateServ: row[iD_Date], importMonth, district: dist });
+                    seenKeys.add(pData.cid);
+                }
+                
+                if (details.length === 0) {
+                    showToast("ไม่พบข้อมูล! โปรดตรวจสอบ 'HOSPCODE' และไฟล์ที่นำเข้า");
+                    document.getElementById('previewArea').classList.add('hidden');
+                    return;
+                }
+
+                window.tempResult = { districtName: dist, unitCode: unit, importMonth, details, timestamp: Date.now() };
+                
+                document.getElementById('previewGrid').innerHTML = `
+                    <div class="bg-slate-50 p-4 rounded-2xl text-center border border-slate-200"><p class="text-[10px] text-slate-500 font-black uppercase">รายการทั้งหมด</p><p class="text-3xl font-black text-slate-800">${details.length}</p></div>
+                    <div class="bg-pink-50 p-4 rounded-2xl text-center border border-pink-100"><p class="text-[10px] text-pink-600 font-black uppercase">หญิงครรภ์</p><p class="text-2xl font-black text-pink-800">${details.filter(d=>d.dType===1).length}</p></div>
+                    <div class="bg-green-50 p-4 rounded-2xl text-center border border-green-100"><p class="text-[10px] text-green-600 font-black uppercase">เด็ก 0-5 ปี</p><p class="text-2xl font-black text-green-800">${details.filter(d=>d.dType===2).length}</p></div>
+                    <div class="bg-orange-50 p-4 rounded-2xl text-center border border-orange-100"><p class="text-[10px] text-orange-600 font-black uppercase">เด็ก 6-12 ปี</p><p class="text-2xl font-black text-orange-800">${details.filter(d=>d.dType===3).length}</p></div>
+                `;
+                
+                document.getElementById('previewArea').classList.remove('hidden'); 
+                showToast(`ประมวลผลสำเร็จ ${details.length} รายการ`);
+            } catch (e) { showToast("เกิดข้อผิดพลาดในการประมวลผล"); }
+            finally { btn.disabled = false; btn.innerText = "เริ่มวิเคราะห์ข้อมูล"; }
+        };
+
+        const aggregate = () => {
+            const uniquePersons = new Map();
+            let lastTs = 0;
+            const unitsInHub = new Set();
+            
+            const execDistData = {};
+            cmDistricts.forEach(d => {
+                execDistData[d] = { c05_d: 0, c05_cav_f: 0, c05_car_f: 0, c612_d: 0, c612_cav_f: 0, c612_car_f: 0 };
+            });
+
+            mainData.forEach(d => { 
+                unitsInHub.add(d.unitCode);
+                if(d.timestamp > lastTs) lastTs = d.timestamp;
+                if (d.details) d.details.forEach(p => { 
+                    if (p.cid) { 
+                        const ex = uniquePersons.get(p.cid); 
+                        if (!ex || (p.dateServ > ex.dateServ)) uniquePersons.set(p.cid, p); 
+                    } 
+                }); 
+            });
+            
+            const ovDist = document.getElementById('overviewDistrictFilter').value;
+            const c05Dist = document.getElementById('child05DistrictFilter').value;
+            const execDist = document.getElementById('execDistrictFilter')?.value; 
+            
+            const total = { 
+                preg: {n:0, d:0, gum:0, dmft:0}, child05: {n:0, d:0, cv:0, dmft:0}, child612: {n:0, d:0, cv:0, dmft:0}, 
+                elderly: {n:0, d:0, occ:0, dmft:0}, working: {n:0, d:0, dmft:0} 
+            };
+            const sub05Stats = { c02: {n:0, d:0}, c35: {n:0, d:0} };
+            
+            const execTotal = { 
+                preg: {n:0, d:0}, child05: {n:0, d:0, cv:0}, child612: {n:0, d:0, cv:0}, 
+                elderly: {n:0, d:0}, working: {n:0, d:0} 
+            };
+            
+            const distChartData = {};
+            cmDistricts.forEach(d => { distChartData[d] = { c02_n: 0, c02_d: 0, c35_n: 0, c35_d: 0 }; });
+
+            uniquePersons.forEach(p => {
+                if (!ovDist || p.district === ovDist) {
+                    if (p.dType === 1) { total.preg.d++; total.preg.dmft += p.cariesValue; if(p.isCariesFree) total.preg.n++; if(p.gumStatus === "ปกติ") total.preg.gum++; }
+                    else if (p.dType === 2) { total.child05.d++; total.child05.dmft += p.cariesValue; if(p.isCariesFree) total.child05.n++; if(p.cavityStatus === "FREE") total.child05.cv++; }
+                    else if (p.dType === 3) { total.child612.d++; total.child612.dmft += p.cariesValue; if(p.isCariesFree) total.child612.n++; if(p.cavityStatus === "FREE") total.child612.cv++; }
+                    else if (p.dType === 4) { total.elderly.d++; total.elderly.dmft += p.cariesValue; if(p.isCariesFree) total.elderly.n++; if(p.occValue >= 4) total.elderly.occ++; }
+                    else if (p.dType === 5) { total.working.d++; total.working.dmft += p.cariesValue; if(p.isCariesFree) total.working.n++; }
+                }
+                
+                if (!execDist || p.district === execDist) {
+                    if (p.dType === 1) { execTotal.preg.d++; if(p.isCariesFree) execTotal.preg.n++; }
+                    else if (p.dType === 2) { execTotal.child05.d++; if(p.cavityStatus === "FREE") execTotal.child05.cv++; }
+                    else if (p.dType === 3) { execTotal.child612.d++; if(p.cavityStatus === "FREE") execTotal.child612.cv++; }
+                    else if (p.dType === 4) { execTotal.elderly.d++; if(p.isCariesFree) execTotal.elderly.n++; }
+                    else if (p.dType === 5) { execTotal.working.d++; if(p.isCariesFree) execTotal.working.n++; }
+                }
+
+                if (!c05Dist || p.district === c05Dist) {
+                    if (p.subGroup05 === "0-2 ปี") { sub05Stats.c02.d++; if(p.cariesValue === 0) sub05Stats.c02.n++; }
+                    if (p.subGroup05 === "3-5 ปี") { sub05Stats.c35.d++; if(p.cariesValue === 0) sub05Stats.c35.n++; }
+                }
+                if (p.subGroup05 === "0-2 ปี") {
+                    if (!distChartData[p.district]) distChartData[p.district] = { c02_n: 0, c02_d: 0, c35_n: 0, c35_d: 0 };
+                    distChartData[p.district].c02_d++; if (p.cariesValue === 0) distChartData[p.district].c02_n++;
+                } else if (p.subGroup05 === "3-5 ปี") {
+                    if (!distChartData[p.district]) distChartData[p.district] = { c02_n: 0, c02_d: 0, c35_n: 0, c35_d: 0 };
+                    distChartData[p.district].c35_d++; if (p.cariesValue === 0) distChartData[p.district].c35_n++;
+                }
+
+                if (p.district) {
+                    if (!execDistData[p.district]) {
+                        execDistData[p.district] = { c05_d: 0, c05_cav_f: 0, c05_car_f: 0, c612_d: 0, c612_cav_f: 0, c612_car_f: 0 };
+                    }
+                    if (p.dType === 2) { 
+                        execDistData[p.district].c05_d++;
+                        if (p.cavityStatus === "FREE") execDistData[p.district].c05_cav_f++;
+                        if (p.isCariesFree) execDistData[p.district].c05_car_f++;
+                    }
+                    if (p.dType === 3) { 
+                        execDistData[p.district].c612_d++;
+                        if (p.cavityStatus === "FREE") execDistData[p.district].c612_cav_f++;
+                        if (p.isCariesFree) execDistData[p.district].c612_car_f++;
+                    }
+                }
+            });
+
+            updateOverviewKPIs(total, sub05Stats);
+            renderChild05Table(uniquePersons, c05Dist);
+            renderUnitReport(uniquePersons);
+            renderIndividualReport(uniquePersons);
+            renderManageReport();
+            renderChart(distChartData);
+            renderExecutiveDashboard(uniquePersons, total, unitsInHub, lastTs, execDistData, execTotal);
+            updateDistrictFilters();
+        };
+
+        // FIXED: นำฟังก์ชัน aggregate ส่งออกไปยัง Global Window 
+        // เพื่อให้ HTML (onchange, oninput) สามารถเรียกใช้งานได้อย่างถูกต้อง
+        window.aggregate = aggregate;
+
+        const updateOverviewKPIs = (total, sub05Stats) => {
+            const setVal = (id, n, d, dmft) => {
+                const elCF = document.getElementById(`${id}-cf-val`);
+                const elDM = document.getElementById(`${id}-dmft-val`);
+                const elCT = document.getElementById(`${id}-count`);
+                if (elCF) elCF.innerText = d > 0 ? (n/d*100).toFixed(1) : "0.0";
+                if (elDM) elDM.innerText = d > 0 ? (dmft/d).toFixed(2) : "0.00";
+                if (elCT) elCT.innerText = d.toLocaleString();
+            };
+            setVal('preg', total.preg.n, total.preg.d, total.preg.dmft);
+            setVal('c05', total.child05.n, total.child05.d, total.child05.dmft);
+            setVal('c612', total.child612.n, total.child612.d, total.child612.dmft);
+            setVal('elder', total.elderly.n, total.elderly.d, total.elderly.dmft);
+            setVal('work', total.working.n, total.working.d, total.working.dmft);
+            
+            if(document.getElementById('preg-gum-val')) document.getElementById('preg-gum-val').innerText = total.preg.d > 0 ? (total.preg.gum/total.preg.d*100).toFixed(1) : "0.0";
+            if(document.getElementById('c05-cv-val')) document.getElementById('c05-cv-val').innerText = total.child05.d > 0 ? (total.child05.cv/total.child05.d*100).toFixed(1) : "0.0";
+            if(document.getElementById('c612-cv-val')) document.getElementById('c612-cv-val').innerText = total.child612.d > 0 ? (total.child612.cv/total.child612.d*100).toFixed(1) : "0.0";
+            if(document.getElementById('elder-occ-val')) document.getElementById('elder-occ-val').innerText = total.elderly.d > 0 ? (total.elderly.occ/total.elderly.d*100).toFixed(1) : "0.0";
+            if(document.getElementById('child05-total-count')) document.getElementById('child05-total-count').innerText = `${(sub05Stats.c02.d + sub05Stats.c35.d).toLocaleString()} คน`;
+            if(document.getElementById('c02-n')) document.getElementById('c02-n').innerText = sub05Stats.c02.d;
+            if(document.getElementById('c02-cf')) document.getElementById('c02-cf').innerText = sub05Stats.c02.d > 0 ? (sub05Stats.c02.n / sub05Stats.c02.d * 100).toFixed(1) + "%" : "0.0%";
+            if(document.getElementById('c35-n')) document.getElementById('c35-n').innerText = sub05Stats.c35.d;
+            if(document.getElementById('c35-cf')) document.getElementById('c35-cf').innerText = sub05Stats.c35.d > 0 ? (sub05Stats.c35.n / sub05Stats.c35.d * 100).toFixed(1) + "%" : "0.0%";
+        };
+
+        const renderExecutiveDashboard = (uniquePersons, total, unitsInHub, lastTs, execDistData, execTotal) => {
+            document.getElementById('exec-total-all').innerText = uniquePersons.size.toLocaleString();
+            document.getElementById('exec-avg-cv05').innerText = total.child05.d > 0 ? (total.child05.cv / total.child05.d * 100).toFixed(1) + "%" : "0.0%";
+            document.getElementById('exec-unit-count').innerText = unitsInHub.size;
+            document.getElementById('exec-last-update').innerText = lastTs > 0 ? new Date(lastTs).toLocaleString('th-TH') : '-';
+
+            const safeExecTotal = execTotal || total;
+
+            const ctxRadar = document.getElementById('execRadarChart');
+            if (ctxRadar) {
+                const groups = ['หญิงครรภ์', 'เด็ก 0-5 ปี', 'เด็ก 6-12 ปี', 'วัยทำงาน (13-59)', 'ผู้สูงอายุ'];
+                const dataRadar = [
+                    safeExecTotal.preg.d > 0 ? (safeExecTotal.preg.n/safeExecTotal.preg.d*100).toFixed(1) : 0,
+                    safeExecTotal.child05.d > 0 ? (safeExecTotal.child05.cv/safeExecTotal.child05.d*100).toFixed(1) : 0,
+                    safeExecTotal.child612.d > 0 ? (safeExecTotal.child612.cv/safeExecTotal.child612.d*100).toFixed(1) : 0,
+                    safeExecTotal.working.d > 0 ? (safeExecTotal.working.n/safeExecTotal.working.d*100).toFixed(1) : 0,
+                    safeExecTotal.elderly.d > 0 ? (safeExecTotal.elderly.n/safeExecTotal.elderly.d*100).toFixed(1) : 0
+                ];
+                if (execRadarChart) execRadarChart.destroy();
+                execRadarChart = new Chart(ctxRadar, {
+                    type: 'radar',
+                    data: {
+                        labels: groups,
+                        datasets: [{
+                            label: 'Caries/Cavity Free (%)',
+                            data: dataRadar,
+                            backgroundColor: 'rgba(20, 184, 166, 0.2)',
+                            borderColor: 'rgb(20, 184, 166)',
+                            pointBackgroundColor: 'rgb(20, 184, 166)',
+                            borderWidth: 3
+                        }]
+                    },
+                    options: { scales: { r: { beginAtZero: true, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } }, maintainAspectRatio: false }
+                });
+            }
+
+            const ctxDoughnut = document.getElementById('execDoughnutChart');
+            if (ctxDoughnut) {
+                const counts = [safeExecTotal.preg.d, safeExecTotal.child05.d, safeExecTotal.child612.d, safeExecTotal.working.d, safeExecTotal.elderly.d];
+                const labels = ['หญิงครรภ์', 'เด็ก 0-5 ปี', 'เด็ก 6-12 ปี', 'วัยทำงาน', 'ผู้สูงอายุ'];
+                const bgColors = ['#f472b6', '#10b981', '#fb923c', '#3b82f6', '#a855f7'];
+                if (execDoughnutChart) execDoughnutChart.destroy();
+                execDoughnutChart = new Chart(ctxDoughnut, {
+                    type: 'doughnut',
+                    data: { labels: labels, datasets: [{ data: counts, backgroundColor: bgColors, borderPadding: 10 }] },
+                    options: { cutout: '70%', plugins: { legend: { display: false } }, maintainAspectRatio: false }
+                });
+                
+                const leg = document.getElementById('execLegend');
+                if(leg) {
+                    leg.innerHTML = labels.map((l, i) => `
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 rounded-full" style="background:${bgColors[i]}"></div>
+                            <span class="text-[10px] font-black text-slate-500 uppercase">${l}: ${counts[i].toLocaleString()}</span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            const compC05Cav = [], compC612Cav = [], compC05Car = [], compC612Car = [];
+            Object.keys(execDistData).forEach(dist => {
+                const d = execDistData[dist];
+                compC05Cav.push({ name: dist, pct: d.c05_d > 0 ? (d.c05_cav_f / d.c05_d * 100) : 0 });
+                compC05Car.push({ name: dist, pct: d.c05_d > 0 ? (d.c05_car_f / d.c05_d * 100) : 0 });
+                compC612Cav.push({ name: dist, pct: d.c612_d > 0 ? (d.c612_cav_f / d.c612_d * 100) : 0 });
+                compC612Car.push({ name: dist, pct: d.c612_d > 0 ? (d.c612_car_f / d.c612_d * 100) : 0 });
+            });
+
+            const lb = document.getElementById('execLeaderboard');
+            if (lb) {
+                const sortedCav05 = [...compC05Cav].sort((a, b) => b.pct - a.pct).slice(0, 5);
+                lb.innerHTML = sortedCav05.map((d, i) => `
+                    <div class="flex items-center gap-4">
+                        <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-500 text-xs">${i+1}</div>
+                        <div class="flex-1">
+                            <div class="flex justify-between text-xs font-bold mb-1">
+                                <span>อ.${d.name}</span>
+                                <span class="text-teal-600">${d.pct.toFixed(1)}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-teal-500 h-full" style="width:${d.pct}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const renderCompChart = (ctxId, chartInstance, dataArray, title) => {
+                const ctx = document.getElementById(ctxId);
+                if (!ctx) return chartInstance;
+                
+                const sortedData = [...dataArray].sort((a,b) => b.pct - a.pct);
+                const labels = sortedData.map(d => "อ." + d.name);
+                const values = sortedData.map(d => d.pct.toFixed(1));
+                
+                const colors = sortedData.map((d, i) => `hsl(${Math.max(0, 120 - (i * 120 / (sortedData.length || 1)))}, 70%, 50%)`);
+                
+                if (chartInstance) chartInstance.destroy();
+                return new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{ data: values, backgroundColor: colors, borderRadius: 4 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, max: 100 }, x: { ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 } } },
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => title + ': ' + c.raw + '%' } } }
+                    }
+                });
+            };
+
+            execCavity05Chart = renderCompChart('execCavity05Chart', execCavity05Chart, compC05Cav, 'Cavity Free 0-5 ปี');
+            execCavity612Chart = renderCompChart('execCavity612Chart', execCavity612Chart, compC612Cav, 'Cavity Free 6-12 ปี');
+            execCaries05Chart = renderCompChart('execCaries05Chart', execCaries05Chart, compC05Car, 'Caries Free 0-5 ปี');
+            execCaries612Chart = renderCompChart('execCaries612Chart', execCaries612Chart, compC612Car, 'Caries Free 6-12 ปี');
+        };
+
+        const renderChart = (data) => {
+            const ctx = document.getElementById('child05BarChart'); if (!ctx) return;
+            const labels = Object.keys(data).sort();
+            const values02 = labels.map(l => {
+                const item = data[l];
+                return (item && item.c02_d > 0) ? (item.c02_n / item.c02_d * 100).toFixed(1) : 0;
+            });
+            const values35 = labels.map(l => {
+                const item = data[l];
+                return (item && item.c35_d > 0) ? (item.c35_n / item.c35_d * 100).toFixed(1) : 0;
+            });
+            
+            if (child05BarChart) child05BarChart.destroy();
+            child05BarChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.map(l => "อ." + l),
+                    datasets: [
+                        { label: 'Cavity Free (%) 0-2 ปี', data: values02, backgroundColor: '#ef4444', borderRadius: 4 },
+                        { label: 'Cavity Free (%) 3-5 ปี', data: values35, backgroundColor: '#3b82f6', borderRadius: 4 }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { y: { beginAtZero: true, max: 100 } },
+                    plugins: { legend: { display: true, position: 'top' } }
+                }
+            });
+        };
+
+        // NEW: PDPA Masking Functions
+        const maskCID = (cid) => (cid && cid.length >= 9) ? cid.substring(0,4) + 'XXXXX' + cid.substring(9) : (cid || '-');
+        const maskName = (fullname) => {
+            if(!fullname) return 'ไม่ทราบชื่อ';
+            const parts = fullname.trim().split(' ');
+            if(parts.length > 1) {
+                const lname = parts.pop();
+                const fname = parts.join(' ');
+                const maskedLname = lname.length >= 3 ? 'XXX' + lname.substring(3) : 'XXX';
+                return fname + ' ' + maskedLname;
+            }
+            return fullname;
+        };
+
+        const renderChild05Table = (uniquePersons, dist) => {
+            const tb = document.getElementById('child05TableBody'); if (!tb) return; tb.innerHTML = '';
+            const ageSub = document.getElementById('filterAgeSub').value;
+            
+            // เปลี่ยนชื่อหัวตารางตามกลุ่มอายุที่เลือก
+            const titleEl = document.getElementById('child05TableTitle');
+            if (titleEl) {
+                if (ageSub === "0-2 ปี") {
+                    titleEl.innerText = "รายชื่อเด็ก 0-2 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
+                } else if (ageSub === "3-5 ปี") {
+                    titleEl.innerText = "รายชื่อเด็ก 3-5 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
+                } else {
+                    titleEl.innerText = "รายชื่อเด็ก 0-5 ปี (เรียงตามการมีฟันผุมาก - น้อย)";
+                }
+            }
+
+            Array.from(uniquePersons.values())
+                .filter(p => p.subGroup05 !== "-" && (!dist || p.district === dist) && (!ageSub || p.subGroup05 === ageSub))
+                .sort((a,b) => (b.dCaries || 0) - (a.dCaries || 0)) // เรียงลำดับตาม DCARIES จากมากไปน้อย
+                .forEach(i => {
+                    const ageStr = i.age ? `${i.age.years}ปี ${i.age.months}ด ${i.age.days}ว` : "-";
+                    const mCid = maskCID(i.cid);
+                    const mName = maskName(i.fullname);
+                    tb.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-mono text-[11px] text-slate-500">${mCid}</td><td class="px-6 py-4 text-xs font-bold">${mName}</td><td class="text-center text-xs">${ageStr}</td><td class="text-center font-black ${i.cavityStatus==='FREE'?'text-teal-600':'text-red-500'}">${i.cavityStatus}</td><td class="text-center text-xs">${i.cariesValue || 0}</td><td class="text-center text-xs text-red-600 font-bold">${i.dCaries || 0}</td><td class="text-right px-8 py-4 font-mono text-slate-400 text-xs">${i.unitCode}</td></tr>`;
+                });
+        };
+
+        window.exportChild05Excel = () => {
+            const pw = document.getElementById('exportPw05').value;
+            if (pw !== 'dentchiangmai') {
+                showToast("รหัสผ่านไม่ถูกต้อง ไม่สามารถส่งออกข้อมูลได้");
+                return;
+            }
+            document.getElementById('exportPw05').value = ''; // เคลียร์รหัสผ่านหลังจากกดตกลง
+
+            const uniquePersons = new Map();
+            mainData.forEach(d => { if (d.details) d.details.forEach(p => { if (p.cid) { const ex = uniquePersons.get(p.cid); if (!ex || (p.dateServ > ex.dateServ)) uniquePersons.set(p.cid, p); } }); });
+            const dist = document.getElementById('child05DistrictFilter').value;
+            const ageSub = document.getElementById('filterAgeSub').value;
+            const rows = Array.from(uniquePersons.values())
+                .filter(p => p.subGroup05 !== "-" && (!dist || p.district === dist) && (!ageSub || p.subGroup05 === ageSub))
+                .sort((a,b) => (b.dCaries || 0) - (a.dCaries || 0))
+                .map(i => ({
+                    // FIXED: ปรับชื่อหัวคอลัมน์ตอนส่งออก Excel ให้ตรงกับหน้าจอเป๊ะๆ
+                    'CID': i.cid, 'ชื่อ-นามสกุล': i.fullname, 'อายุ (ปี)': i.age?.years || 0, 'อายุ (เดือน)': i.age?.months || 0, 'อายุ (วัน)': i.age?.days || 0,
+                    'กลุ่มย่อย': i.subGroup05, 'CAVITY FREE': i.cavityStatus, 'dmft': i.cariesValue, 'จ.น.ฟันผุ': i.dCaries, 'HOSPCODE': i.unitCode, 'อำเภอ': i.district, 'วันที่รับบริการ': i.dateServ
+                }));
+            if (rows.length === 0) return showToast("ไม่มีข้อมูลสำหรับส่งออก");
+            const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Child_05_Report");
+            XLSX.writeFile(wb, `Dental_Child05_${dist || 'All'}_${new Date().getTime()}.xlsx`);
+        };
+
+        const renderUnitReport = (uniquePersons) => {
+            const tb = document.getElementById('unitTableBody'), dm = document.getElementById('districtMonthTableBody'); 
+            if (!tb || !dm) return; tb.innerHTML = ''; dm.innerHTML = '';
+            const unitMap = new Map(), distMonth = {};
+            mainData.forEach(d => { if (!unitMap.has(d.unitCode)) unitMap.set(d.unitCode, { dist: d.districtName, c: {1:0,2:0,3:0,4:0,5:0} }); });
+            uniquePersons.forEach(p => { 
+                if (unitMap.has(p.unitCode)) unitMap.get(p.unitCode).c[p.dType]++; 
+                if (!distMonth[p.district]) distMonth[p.district] = {}; distMonth[p.district][p.importMonth] = (distMonth[p.district][p.importMonth]||0)+1;
+            });
+            Array.from(unitMap.entries()).sort().forEach(([code, d]) => {
+                const total = Object.values(d.c).reduce((a,b)=>a+b, 0);
+                tb.innerHTML += `<tr class="hover:bg-teal-50"><td class="px-10 py-5 text-sm font-black">${code} (อ.${d.dist})</td><td class="text-center">${d.c[1]}</td><td class="text-center">${d.c[2]}</td><td class="text-center">${d.c[3]}</td><td class="text-center">${d.c[5]}</td><td class="text-center">${d.c[4]}</td><td class="text-right px-10 py-5 font-black">${total}</td></tr>`;
+            });
+            const months = ['202509','202510','202511','202512','202601','202602','202603','202604','202605','202606','202607','202608','202609'];
+            Object.keys(distMonth).sort().forEach(dist => {
+                let row = `<tr class="hover:bg-slate-50"><td class="px-6 py-5 font-black text-xs">อ.${dist}</td>`;
+                months.forEach(m => row += `<td class="text-center text-xs ${distMonth[dist][m]?'text-teal-600 font-bold':'text-slate-300'}">${distMonth[dist][m] || 'ยังไม่ส่ง'}</td>`);
+                dm.innerHTML += row + '</tr>';
+            });
+        };
+
+        const renderIndividualReport = (uniquePersons) => {
+            const tb = document.getElementById('individualTableBody'); if (!tb) return; tb.innerHTML = '';
+            const search = document.getElementById('individualSearch').value.toLowerCase();
+            const dist = document.getElementById('filterDistrict').value;
+            const unit = document.getElementById('filterUnit').value;
+            const group = document.getElementById('filterGroupInd').value;
+            Array.from(uniquePersons.values())
+                .filter(i => (!search || i.cid.includes(search) || (i.fullname && i.fullname.toLowerCase().includes(search))) && (!dist || i.district === dist) && (!unit || i.unitCode === unit) && (!group || i.dType.toString() === group))
+                .forEach(i => {
+                    const getC = (v) => v === "ปกติ" || v === "FREE" || v >= 4 ? 'text-teal-600 font-black' : (v === "-" ? 'text-slate-300' : 'text-red-500 font-black');
+                    const mCid = maskCID(i.cid);
+                    const mName = maskName(i.fullname);
+                    tb.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-mono text-[11px] text-slate-500">${mCid}</td><td class="px-6 py-4 text-xs font-bold">${mName}</td><td class="text-center text-xs">${i.dType}</td><td class="text-center text-xs font-black">${i.cariesValue || 0}</td><td class="text-center text-xs ${getC(i.gumStatus)}">${i.gumStatus}</td><td class="text-center text-xs ${getC(i.cavityStatus)}">${i.cavityStatus}</td><td class="text-center text-xs ${getC(i.occValue)}">${i.occValue !== null ? i.occValue : '-'}</td><td class="text-center"><span class="px-2 py-1 rounded-full text-[9px] font-black uppercase ${i.isCariesFree?'bg-green-100 text-green-700':'bg-pink-100 text-pink-700'}">${i.isCariesFree?'Free':'Risk'}</span></td><td class="text-right px-8 py-4 font-mono text-slate-400 text-[10px]">${i.unitCode}</td></tr>`;
+                });
+        };
+
+        const renderManageReport = () => {
+            const tb = document.getElementById('manageTableBody'); if (!tb) return; tb.innerHTML = ''; 
+            mainData.sort((a,b)=>b.timestamp-a.timestamp).forEach(item => {
+                tb.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-8 py-4 text-xs font-bold text-slate-400">${new Date(item.timestamp).toLocaleString('th-TH')}</td><td class="px-6 py-4 text-sm font-black">อ.${item.districtName} / ${item.unitCode}</td><td class="text-center text-xs">${item.importMonth}</td><td class="text-center font-black text-teal-600">${item.details.length}</td><td class="text-right px-8 py-4"><button onclick="window.delFile('${item.id}')" class="text-red-500 font-black text-xs hover:underline">ลบไฟล์</button></td></tr>`;
+            });
+        };
+
+        const updateDistrictFilters = () => {
+            const sels = [
+                document.getElementById('overviewDistrictFilter'), 
+                document.getElementById('child05DistrictFilter'), 
+                document.getElementById('filterDistrict'), 
+                document.getElementById('resetDistrictSelect'), 
+                document.getElementById('districtSelect'),
+                document.getElementById('execDistrictFilter')
+            ];
+            
+            sels.forEach((sel) => {
+                if(!sel) return; const cur = sel.value;
+                if (sel.id === 'districtSelect') { 
+                    sel.innerHTML = `<option value="">-- เลือกอำเภอ --</option>`; 
+                    cmDistricts.forEach(d => sel.innerHTML += `<option value="${d}" ${d===cur?'selected':''}>${d}</option>`); 
+                }
+                else if (sel.id === 'resetDistrictSelect') { 
+                    sel.innerHTML = `<option value="">-- รีเซ็ตอำเภอ --</option>`; 
+                    cmDistricts.forEach(d => sel.innerHTML += `<option value="${d}" ${d===cur?'selected':''}>อ.${d}</option>`); 
+                }
+                else if (sel.id === 'execDistrictFilter' || sel.id === 'overviewDistrictFilter') { 
+                    sel.innerHTML = `<option value="">-- แสดงทั้งจังหวัดเชียงใหม่ --</option>`; 
+                    cmDistricts.forEach(d => sel.innerHTML += `<option value="${d}" ${d===cur?'selected':''}>อ.${d}</option>`); 
+                }
+                else { 
+                    sel.innerHTML = `<option value="">-- ทุกอำเภอ --</option>`; 
+                    cmDistricts.forEach(d => sel.innerHTML += `<option value="${d}" ${d===cur?'selected':''}>อ.${d}</option>`); 
+                }
+            });
+            
+            const unitsInHub = new Set(); mainData.forEach(m => unitsInHub.add(m.unitCode));
+            const us = document.getElementById('filterUnit'); if (us) {
+                const curU = us.value; us.innerHTML = '<option value="">-- ทุกรหัสหน่วย --</option>';
+                Array.from(unitsInHub).sort().forEach(u => us.innerHTML += `<option value="${u}" ${u===curU?'selected':''}>${u}</option>`);
+            }
+        };
+
+        // FIXED: เพิ่มระบบถามรหัสผ่าน (dentchiangmai) ก่อนอนุญาตให้ลบข้อมูล เพื่อป้องกันคนอื่นล้างข้อมูลสะสม
+        window.delFile = (id) => window.showConfirm("ลบข้อมูลชุดนี้?", async () => {
+            const pw = prompt("กรุณากรอกรหัสผ่านผู้ดูแลระบบเพื่อยืนยันการลบไฟล์:");
+            if (pw !== 'dentchiangmai') {
+                showToast("รหัสผ่านไม่ถูกต้อง! สิทธิ์การลบถูกปฏิเสธ");
+                return;
+            }
+            if (!user) { showToast("เซิร์ฟเวอร์กำลังเชื่อมต่อ โปรดรอสักครู่"); return; }
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dental_records', id));
+        });
+
+        window.resetDistrict = () => {
+            const d = document.getElementById('resetDistrictSelect').value; if(!d) return;
+            window.showConfirm(`ลบข้อมูลทั้งหมดของ อ.${d}?`, async () => {
+                const pw = prompt("กรุณากรอกรหัสผ่านผู้ดูแลระบบเพื่อยืนยันการล้างข้อมูลทั้งอำเภอ:");
+                if (pw !== 'dentchiangmai') {
+                    showToast("รหัสผ่านไม่ถูกต้อง! สิทธิ์การลบถูกปฏิเสธ");
+                    return;
+                }
+                if (!user) { showToast("เซิร์ฟเวอร์กำลังเชื่อมต่อ โปรดรอสักครู่"); return; }
+                const docs = mainData.filter(o => o.districtName === d);
+                for (const o of docs) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dental_records', o.id));
+            });
+        };
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCca70PCyjpm9ql9x9g797ho-xduRGXshs",
+  authDomain: "yamatoyrc-af0cc.firebaseapp.com",
+  projectId: "yamatoyrc-af0cc",
+  storageBucket: "yamatoyrc-af0cc.firebasestorage.app",
+  messagingSenderId: "1013893965206",
+  appId: "1:1013893965206:web:89c2ba9593eee4cee229b7",
+  measurementId: "G-39EQFYYJHH"
+};
+
+        const init = async () => {
+            const app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
+            
+            const initAuth = async () => {
+                let token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : (typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null);
+                if (token) {
+                    await signInWithCustomToken(auth, token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+            
+            try { await initAuth(); } catch(e) { document.getElementById('authStatus').innerText = "Auth Failed"; return; }
+
+            onAuthStateChanged(auth, (u) => { 
+                user = u;
+                if (u) {
+                    document.getElementById('authStatus').innerText = "Syncing...";
+                    onSnapshot(
+                        collection(db, 'artifacts', appId, 'public', 'data', 'dental_records'), 
+                        (s) => { 
+                            mainData = s.docs.map(d => ({id: d.id, ...d.data()})).filter(d => getFY(d.importMonth) === activeFY); 
+                            window.aggregate(); 
+                            document.getElementById('authStatus').innerText = `Online: ${mainData.length} Data Sets`;
+                        },
+                        (error) => { console.error(error); showToast("เกิดข้อผิดพลาดในการดึงข้อมูลจากเซิร์ฟเวอร์"); }
+                    ); 
+                } 
+            });
+            initIcons();
+            document.getElementById('processBtn')?.addEventListener('click', processData);
+            
+            document.getElementById('sendToHubBtn')?.addEventListener('click', async () => {
+                if (!user) { showToast("กำลังเชื่อมต่อฐานข้อมูล โปรดรอสักครู่..."); return; }
+                if (!window.tempResult) return; 
+                
+                const btn = document.getElementById('sendToHubBtn');
+                const originalText = btn.innerText;
+                btn.innerText = "กำลังบันทึกข้อมูล...";
+                btn.disabled = true;
+                
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'dental_records'), window.tempResult);
+                    window.tempResult = null; 
+                    document.getElementById('previewArea').classList.add('hidden'); 
+                    
+                    document.getElementById('successModal').classList.remove('hidden');
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                    
+                    window.switchTab('executive');
+                } catch (e) {
+                    showToast("เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่");
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            });
+            
+            document.getElementById('exportExcelBtn')?.addEventListener('click', () => {
+                const pw = document.getElementById('exportPwInd').value;
+                if (pw !== 'dentchiangmai') {
+                    showToast("รหัสผ่านไม่ถูกต้อง ไม่สามารถส่งออกข้อมูลได้");
+                    return;
+                }
+                document.getElementById('exportPwInd').value = ''; // เคลียร์รหัสผ่านหลังจากกดตกลง
+
+                const rows = [];
+                // FIXED: ปรับชื่อและเพิ่มคอลัมน์ที่หายไปตอนส่งออก Excel ให้ตรงกับหน้าจอรายงานบุคคลเป๊ะๆ 100%
+                mainData.forEach(m => m.details?.forEach(i => rows.push({ 
+                    'CID': i.cid, 'ชื่อ-นามสกุล': i.fullname, 'กลุ่ม': i.dType, 'DMFT/dmft': i.cariesValue, 
+                    'เหงือก': i.gumStatus, 'CAVITY FREE': i.cavityStatus, 'คู่สบ (4 คู่)': i.occValue !== null ? i.occValue : '-', 
+                    'CARIES FREE': i.isCariesFree ? 'Free' : 'Risk', 'HOSPCODE': i.unitCode, 'วันที่รับบริการ': i.dateServ 
+                })));
+                const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "DentalKPI"); XLSX.writeFile(wb, "Dental_Individual_All.xlsx");
+            });
+        };
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
